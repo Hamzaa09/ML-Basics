@@ -29,21 +29,12 @@ def scrape_one_page(page_number):
 
     soup = BeautifulSoup(response.text, "html.parser")
 
-    cars = {
-        "brand":        [],
-        "model":        [],
-        "year":         [],
-        "mileage_km":   [],
-        "fuel_type":    [],
-        "transmission": [],
-        "engine_cc":    [],
-        "city":         [],
-        "price_pkr":    [],        
-    }
-    
     # data lies in <script type="application/ld+json">
     script_tags = soup.find_all("script", type="application/ld+json")
 
+    data_list = []
+
+    i = 0
     for tag in script_tags:
         try:
             data = json.loads(tag.string)
@@ -75,15 +66,12 @@ def scrape_one_page(page_number):
         city         = parent.find("ul", class_="search-vehicle-info").li.text.strip() if parent.find("ul", class_="search-vehicle-info") else None
         model        = parent.find("ul", class_="search-vehicle-info").li.text.strip() if parent.find("ul", class_="search-vehicle-info") else None
 
-        # Append data to respective lists
-        for key, value in zip(cars.keys(), [brand, model, year, mileage_km, fuel_type, transmission, engine_cc, city, price_pkr]):
-            cars[key].append(value)
-
+        data_list.append([brand, model, year, mileage_km, fuel_type, transmission, engine_cc, city, price_pkr])
+        i += 1
         print(f"  ✅ {brand} {model} {year} | {city} | PKR {price_pkr}")
 
-    print(f"{len(cars)} cars found on page {page_number}")
-    return cars
-
+    print(f"{i} cars found on page {page_number}")
+    return data_list
 
 # Step 3: CSV
 
@@ -102,16 +90,33 @@ def save_to_csv(all_cars, filename="pakwheels_data.csv"):
 # Step 4: Main program
 
 def main():
-    PAGES_TO_SCRAPE = 1
-    DELAY_SECONDS   = 1
+    PAGES_TO_SCRAPE = 1000
+    DELAY_SECONDS   = 0
     OUTPUT_FILE     = "pakwheels_data.csv"
 
     print("Scraping Started...")
     print(f"Pages: {PAGES_TO_SCRAPE} | Delay: {DELAY_SECONDS}s\n")
 
+    cars = {
+        "brand":        [],
+        "model":        [],
+        "year":         [],
+        "mileage_km":   [],
+        "fuel_type":    [],
+        "transmission": [],
+        "engine_cc":    [],
+        "city":         [],
+        "price_pkr":    [],        
+    }
+
     for page in range(1, PAGES_TO_SCRAPE + 1):
-        cars = scrape_one_page(page)
+        car_data = scrape_one_page(page)
+
+        for i in range(len(car_data)):
+            for key, value in zip(cars.keys(), car_data[i]):
+                cars[key].append(value)     
         time.sleep(DELAY_SECONDS)  
+        
     save_to_csv(cars, OUTPUT_FILE)
     print("\n✅ Scraping complete!")
 
